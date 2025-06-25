@@ -1,0 +1,289 @@
+<tool id="alphagenome_variant_scorer" name="AlphaGenome Variant Scorer" version="@TOOL_VERSION@" profile="@PROFILE@">
+    <description>Predict functional effects of genetic variants using AlphaGenome</description>
+    
+    <macros>
+        <import>macros.xml</import>
+    </macros>
+    
+    <creator>
+        <person givenName="Galaxy" familyName="AlphaGenome Team" email="alphagenome@galaxyproject.org" />
+    </creator>
+    
+    <requirements>
+        <requirement type="package" version="@PYTHON_VERSION@">python</requirement>
+        <requirement type="package" version="@PYSAM_VERSION@">pysam</requirement>
+        <requirement type="package" version="@CYVCF2_VERSION@">cyvcf2</requirement>
+        <requirement type="package" version="@REQUESTS_VERSION@">requests</requirement>
+        <requirement type="package" version="@URLLIB3_VERSION@">urllib3</requirement>
+    </requirements>
+    
+    <version_command>python '$__tool_directory__/alphagenome_variant_scorer.py' --version</version_command>
+    
+    <command detect_errors="exit_code"><![CDATA[
+        @SETUP_ENVIRONMENT@
+        
+        python '$__tool_directory__/alphagenome_variant_scorer.py'
+            --input '$input_vcf'
+            --output '$output_vcf'
+            --api-key '$api_config.api_key'
+            --predictions
+            #for $pred in $prediction_options.predictions
+                '$pred'
+            #end for
+            --max-variants $processing.max_variants
+            --window-size $processing.window_size
+            --batch-size $processing.batch_size
+            #if $reference.ref_source == "history"
+                --reference '$reference.reference_genome'
+            #else
+                --reference '$reference.builtin.fields.path'
+            #end if
+            --cache-dir '$__job_directory__/alphagenome_cache'
+            #if $output_options.verbose
+                --verbose
+            #end if
+    ]]></command>
+    
+    <inputs>
+        <!-- Input VCF file -->
+        <param name="input_vcf" type="data" format="vcf,vcf_bgzip" label="Input VCF file" 
+               help="VCF file containing genetic variants to score with AlphaGenome"/>
+        
+        <!-- API Configuration -->
+        <section name="api_config" title="AlphaGenome API Configuration" expanded="true">
+            <param name="api_key" type="text" label="AlphaGenome API Key" 
+                   help="Get your API key from https://deepmind.google.com/science/alphagenome">
+                <sanitizer>
+                    <valid initial="string.ascii_letters,string.digits">
+                        <add value="-"/>
+                        <add value="_"/>
+                        <add value="."/>
+                    </valid>
+                </sanitizer>
+                <validator type="empty_field" message="API key is required"/>
+                <validator type="length" min="10" message="API key seems too short"/>
+            </param>
+        </section>
+        
+        <!-- Reference genome selection -->
+        <conditional name="reference">
+            <param name="ref_source" type="select" label="Reference genome source">
+                <option value="builtin" selected="true">Use built-in reference genome</option>
+                <option value="history">Use reference genome from history</option>
+            </param>
+            <when value="builtin">
+                <param name="builtin" type="select" label="Select reference genome">
+                    <options from_data_table="fasta_indexes">
+                        <filter type="sort_by" column="2"/>
+                        <validator type="no_options" message="No reference genomes available. Contact your Galaxy administrator."/>
+                    </options>
+                </param>
+            </when>
+            <when value="history">
+                <param name="reference_genome" type="data" format="fasta,fasta.gz" 
+                       label="Reference genome (FASTA)"
+                       help="Reference genome in FASTA format"/>
+            </when>
+        </conditional>
+        
+        <!-- Prediction options -->
+        <section name="prediction_options" title="Prediction Configuration" expanded="true">
+            <param name="predictions" type="select" multiple="true" display="checkboxes" 
+                   label="Select prediction types to include">
+                <option value="expression" selected="true">Gene expression impact</option>
+                <option value="splicing" selected="true">Splicing disruption</option>
+                <option value="chromatin" selected="false">Chromatin accessibility</option>
+                <option value="conservation" selected="false">Conservation scores</option>
+                <validator type="no_options" message="At least one prediction type must be selected"/>
+            </param>
+        </section>
+        
+        <!-- Processing parameters -->
+        <section name="processing" title="Processing Parameters" expanded="false">
+            <param name="max_variants" type="integer" value="1000" min="1" max="10000"
+                   label="Maximum variants to process" 
+                   help="Due to API rate limits, processing is capped. Large numbers may take considerable time."/>
+            
+            <param name="window_size" type="integer" value="1000" min="200" max="5000"
+                   label="Sequence context window size (bp)" 
+                   help="Size of genomic sequence window around each variant for context"/>
+            
+            <param name="batch_size" type="integer" value="50" min="1" max="100"
+                   label="API batch size"
+                   help="Number of variants to process per API batch. Smaller values are more conservative."/>
+        </section>
+        
+        <!-- Output options -->
+        <section name="output_options" title="Output Options" expanded="false">
+            <param name="verbose" type="boolean" checked="false" truevalue="true" falsevalue="false"
+                   label="Enable verbose logging"
+                   help="Provide detailed logging information for debugging"/>
+        </section>
+    </inputs>
+    
+    <outputs>
+        <data name="output_vcf" format="vcf" label="${tool.name} on ${on_string}: Annotated VCF"
+              help="VCF file annotated with AlphaGenome predictions"/>
+    </outputs>
+    
+    <tests>
+        <!-- Basic test with expression and splicing predictions -->
+        <test expect_num_outputs="1">
+            <param name="input_vcf" value="test_variants.vcf"/>
+            <param name="api_key" value="test_api_key_12345"/>
+            <param name="ref_source" value="history"/>
+            <param name="reference_genome" value="test_reference.fa"/>
+            <section name="prediction_options">
+                <param name="predictions" value="expression,splicing"/>
+            </section>
+            <section name="processing">
+                <param name="max_variants" value="10"/>
+                <param name="window_size" value="500"/>
+            </section>
+            <output name="output_vcf" file="expected_output_basic.vcf" lines_diff="2"/>
+        </test>
+        
+        <!-- Test with all prediction types -->
+        <test expect_num_outputs="1">
+            <param name="input_vcf" value="test_variants.vcf"/>
+            <param name="api_key" value="test_api_key_12345"/>
+            <param name="ref_source" value="history"/>
+            <param name="reference_genome" value="test_reference.fa"/>
+            <section name="prediction_options">
+                <param name="predictions" value="expression,splicing,chromatin,conservation"/>
+            </section>
+            <section name="processing">
+                <param name="max_variants" value="5"/>
+            </section>
+            <output name="output_vcf" file="expected_output_all.vcf" lines_diff="2"/>
+        </test>
+        
+        <!-- Test with built-in reference (if available) -->
+        <test expect_num_outputs="1">
+            <param name="input_vcf" value="test_variants_small.vcf"/>
+            <param name="api_key" value="test_api_key_12345"/>
+            <param name="ref_source" value="builtin"/>
+            <param name="builtin" value="hg38"/>
+            <section name="prediction_options">
+                <param name="predictions" value="expression"/>
+            </section>
+            <section name="processing">
+                <param name="max_variants" value="3"/>
+            </section>
+            <output name="output_vcf" file="expected_output_builtin.vcf" lines_diff="2"/>
+        </test>
+    </tests>
+    
+    <help><![CDATA[
+**AlphaGenome Variant Scorer**
+
+This tool uses Google DeepMind's AlphaGenome model to predict the functional effects of genetic variants. AlphaGenome is a unified deep learning model that can predict various genomic features and their disruption by genetic variants.
+
+-----
+
+**What it does**
+
+The AlphaGenome Variant Scorer processes VCF files containing genetic variants and adds functional impact predictions as INFO fields. It can predict multiple types of molecular effects:
+
+• **Gene expression impact**: How the variant affects gene expression levels
+• **Splicing disruption**: Whether the variant disrupts normal RNA splicing
+• **Chromatin accessibility**: Impact on chromatin structure and accessibility
+• **Conservation scores**: Evolutionary conservation at the variant position
+
+-----
+
+**Input**
+
+• **VCF file**: Standard VCF format containing genetic variants (supports compressed VCF.gz)
+• **Reference genome**: Either a built-in reference genome or a FASTA file from your history
+• **AlphaGenome API key**: Required for accessing the AlphaGenome prediction service
+
+-----
+
+**Output**
+
+The tool produces an annotated VCF file with additional INFO fields:
+
+• **AG_EXPR**: Gene expression impact score (0-1, higher = more impact)
+• **AG_SPLICE**: Splicing disruption score (0-1, higher = more disruptive)  
+• **AG_CHROM**: Chromatin accessibility impact score (0-1, higher = more impact)
+• **AG_CONS**: Conservation score (0-1, higher = more conserved)
+
+-----
+
+**Parameters**
+
+**API Configuration:**
+• **API Key**: Obtain from https://deepmind.google.com/science/alphagenome
+
+**Prediction Types:**
+• Select which types of predictions to include
+• More prediction types = longer processing time
+• Recommended: Start with expression and splicing
+
+**Processing Parameters:**
+• **Max variants**: Limits processing due to API quotas (default: 1000)
+• **Window size**: Genomic context around variants (default: 1000 bp)
+• **Batch size**: API efficiency parameter (default: 50)
+
+-----
+
+**Performance Notes**
+
+• Processing time depends on number of variants and API response time
+• Large VCF files are processed in batches with progress reporting
+• Results are cached to avoid redundant API calls
+• API rate limiting is automatically handled
+
+-----
+
+**Limitations**
+
+• **Non-commercial use only** - As per AlphaGenome terms of service
+• **API quotas apply** - Large-scale processing may require multiple runs
+• **Human genome focus** - Optimized for human genetic variants
+• **Network required** - Requires internet access to AlphaGenome API
+
+-----
+
+**Citation**
+
+If you use this tool in your research, please cite:
+
+*Avsec et al. (2025). "AlphaGenome: A unified model for deciphering the regulatory code of DNA sequences"*
+
+**Galaxy Tool Authors:** Galaxy AlphaGenome Team
+
+-----
+
+**Getting Help**
+
+• **AlphaGenome Documentation**: https://www.alphagenomedocs.com/
+• **Galaxy Help**: https://help.galaxyproject.org/
+• **Tool Issues**: Report at https://github.com/galaxy-alphagenome/tools
+
+-----
+
+**Example Workflow**
+
+1. Upload your VCF file and reference genome (if not using built-in)
+2. Obtain an AlphaGenome API key
+3. Select desired prediction types
+4. Run the tool with appropriate parameters
+5. Examine the annotated VCF output
+6. Use scores to prioritize variants for further analysis
+    ]]></help>
+    
+    <citations>
+        <citation type="doi">10.1038/s41586-2025-alphagenome</citation>
+        <citation type="bibtex">
+            @article{alphagenome2025,
+                title={AlphaGenome: A unified model for deciphering the regulatory code of DNA sequences},
+                author={Avsec, Žiga and others},
+                journal={Nature},
+                year={2025},
+                doi={10.1038/s41586-2025-alphagenome}
+            }
+        </citation>
+    </citations>
+</tool>
