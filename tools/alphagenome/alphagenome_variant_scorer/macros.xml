@@ -84,7 +84,7 @@ To use this tool, you need an AlphaGenome API key:
             </param>
             <when value="builtin">
                 <param name="builtin" type="select" label="Select reference genome">
-                    <options from_data_table="fasta_indexes">
+                    <options from_data_table="all_fasta">
                         <filter type="sort_by" column="2"/>
                         <validator type="no_options" message="No reference genomes available"/>
                     </options>
