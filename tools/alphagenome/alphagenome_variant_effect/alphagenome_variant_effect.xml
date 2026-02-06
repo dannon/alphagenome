@@ -67,8 +67,8 @@
 
         <param name="sequence_length" type="select" label="Prediction window size">
             <option value="16KB">16 KB</option>
-            <option value="100KB">100 KB</option>
-            <option value="500KB">500 KB</option>
+            <option value="128KB">128 KB</option>
+            <option value="512KB">512 KB</option>
             <option value="1MB" selected="true">1 MB</option>
         </param>
 
@@ -159,8 +159,8 @@ Optional tissue/cell type context for predictions. Common terms:
 Larger windows capture more genomic context but cost more compute:
 
 - **16 KB** — Fast, minimal context
-- **100 KB** — Good for most variants
-- **500 KB** — Extended regulatory context
+- **128 KB** — Good for most variants
+- **512 KB** — Extended regulatory context
 - **1 MB** — Maximum context (default, recommended)
 
 -----

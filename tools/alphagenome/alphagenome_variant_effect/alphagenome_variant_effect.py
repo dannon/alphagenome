@@ -54,8 +54,8 @@ ORGANISM_MAP = {
 
 SEQUENCE_LENGTH_MAP = {
     "16KB": 16_384,
-    "100KB": 100_000,
-    "500KB": 500_000,
+    "128KB": 131_072,
+    "512KB": 524_288,
     "1MB": 1_048_576,
 }
 
@@ -175,16 +175,13 @@ def run(args):
                 )
                 interval = variant.reference_interval.resize(seq_length)
 
-                predict_kwargs = {
-                    "interval": interval,
-                    "variant": variant,
-                    "organism": organism,
-                    "requested_outputs": requested_outputs,
-                }
-                if ontology_terms:
-                    predict_kwargs["ontology_terms"] = ontology_terms
-
-                outputs = model.predict_variant(**predict_kwargs)
+                outputs = model.predict_variant(
+                    interval=interval,
+                    variant=variant,
+                    organism=organism,
+                    ontology_terms=ontology_terms,
+                    requested_outputs=requested_outputs,
+                )
 
                 # Compute per-output-type scores
                 all_scores = []
