@@ -12,9 +12,10 @@ import csv
 import logging
 import sys
 
+import numpy as np
 from alphagenome.data import genome
 from alphagenome.models import dna_client
-from alphagenome.models.variant_scorers import RECOMMENDED_VARIANT_SCORERS, tidy_scores
+from alphagenome.models.variant_scorers import RECOMMENDED_VARIANT_SCORERS
 
 __version__ = "0.1.0"
 
@@ -99,63 +100,84 @@ def run(args):
     logging.info("Model ready.")
 
     stats = {"regions": 0, "scored": 0, "errors": 0}
-    all_rows = []
+    row_count = 0
 
-    for region_num, (chrom, start, end, name) in enumerate(regions):
-        stats["regions"] += 1
-        width = end - start
-        logging.info("Region %d/%d: %s (%s:%d-%d, %dbp, %d mutations)",
-                     region_num + 1, len(regions), name, chrom, start, end, width, width * 3)
+    with open(args.output, "w", newline="") as outfile:
+        writer = csv.writer(outfile, delimiter="\t")
+        writer.writerow([
+            "region", "position", "ref_base", "alt_base",
+            "gene_id", "gene_name", "gene_type",
+            "scorer", "track_name", "ontology_curie",
+            "raw_score", "quantile_score",
+        ])
 
-        try:
-            interval = genome.Interval(chrom, start, end).resize(seq_length)
-            ism_interval = genome.Interval(chrom, start, end, strand="+")
+        for region_num, (chrom, start, end, name) in enumerate(regions):
+            stats["regions"] += 1
+            width = end - start
+            logging.info("Region %d/%d: %s (%s:%d-%d, %dbp, %d mutations)",
+                         region_num + 1, len(regions), name, chrom, start, end, width, width * 3)
 
-            results = model.score_ism_variants(
-                interval, ism_interval,
-                variant_scorers=selected_scorers,
-                organism=organism,
-                max_workers=args.max_workers,
-            )
+            try:
+                interval = genome.Interval(chrom, start, end).resize(seq_length)
+                ism_interval = genome.Interval(chrom, start, end, strand="+")
 
-            # results is list[list[AnnData]] — outer=variants, inner=scorers
-            # Each variant is a single-base substitution at a position
-            position = start
-            alt_index = 0
-            bases = ["A", "C", "G", "T"]
+                results = model.score_ism_variants(
+                    interval, ism_interval,
+                    variant_scorers=selected_scorers,
+                    organism=organism,
+                    max_workers=args.max_workers,
+                )
 
-            for var_results in results:
-                # Determine position and alt base from index
-                # ISM generates 3 variants per position (all non-ref bases)
-                ref_base_pos = start + (alt_index // 3)
-                alt_base_idx = alt_index % 3
+                # results is list[list[AnnData]] — outer=variants (3*width), inner=scorers
+                # Each AnnData has: uns['variant'] with position/ref/alt,
+                # X for raw scores, layers['quantiles'], obs for genes, var for tracks
+                for var_results in results:
+                    for scorer_idx, ad in enumerate(var_results):
+                        variant_obj = ad.uns["variant"]
+                        pos = variant_obj.position
+                        ref_base = variant_obj.reference_bases
+                        alt_base = variant_obj.alternate_bases
+                        scorer_name = args.scorers[scorer_idx] if scorer_idx < len(args.scorers) else f"scorer_{scorer_idx}"
 
-                df = tidy_scores(var_results)
-                df.insert(0, "region", name)
-                df.insert(1, "position", ref_base_pos)
-                # We don't know the ref base without a reference genome, so
-                # label by mutation index; the API returns them in order
-                df.insert(2, "mutation_index", alt_base_idx)
-                all_rows.append(df)
-                alt_index += 1
+                        raw_scores = ad.X  # shape (n_genes, n_tracks)
+                        quantile_scores = ad.layers.get("quantiles", None)
 
-            stats["scored"] += 1
-            logging.info("Region %s: %d ISM results", name, len(results))
+                        for gene_idx in range(ad.n_obs):
+                            gene_row = ad.obs.iloc[gene_idx]
+                            gene_id = str(gene_row.get("gene_id", ""))
+                            gene_name = str(gene_row.get("gene_name", ""))
+                            gene_type = str(gene_row.get("gene_type", ""))
 
-        except Exception as e:
-            logging.error("Error scanning region %s (%s:%d-%d): %s", name, chrom, start, end, e)
-            stats["errors"] += 1
+                            for track_idx in range(ad.n_vars):
+                                track_row = ad.var.iloc[track_idx]
+                                track_name = str(track_row.get("name", ""))
+                                ontology_curie = str(track_row.get("ontology_curie", ""))
 
-    # Write output
-    if all_rows:
-        import pandas as pd
-        combined = pd.concat(all_rows, ignore_index=True)
-        combined.to_csv(args.output, sep="\t", index=False)
-        logging.info("Wrote %d rows to %s", len(combined), args.output)
-    else:
-        with open(args.output, "w") as f:
-            f.write("region\tposition\tmutation_index\n")
-        logging.warning("No regions scored successfully")
+                                raw = float(raw_scores[gene_idx, track_idx])
+                                if np.isnan(raw):
+                                    continue
+                                quant = ""
+                                if quantile_scores is not None:
+                                    q = float(quantile_scores[gene_idx, track_idx])
+                                    if not np.isnan(q):
+                                        quant = f"{q:.6f}"
+
+                                writer.writerow([
+                                    name, pos, ref_base, alt_base,
+                                    gene_id, gene_name, gene_type,
+                                    scorer_name, track_name, ontology_curie,
+                                    f"{raw:.6f}", quant,
+                                ])
+                                row_count += 1
+
+                stats["scored"] += 1
+                logging.info("Region %s: %d ISM variants scored", name, len(results))
+
+            except Exception as e:
+                logging.error("Error scanning region %s (%s:%d-%d): %s", name, chrom, start, end, e)
+                stats["errors"] += 1
+
+    logging.info("Wrote %d rows to %s", row_count, args.output)
 
     logging.info("=" * 50)
     logging.info("DONE — %d regions, %d scored, %d errors",
