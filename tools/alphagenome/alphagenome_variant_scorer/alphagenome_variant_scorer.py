@@ -106,7 +106,6 @@ def run(args):
                 )
 
                 df = tidy_scores(scores)
-                df.insert(0, "variant_id", variant_id)
                 all_rows.append(df)
                 stats["scored"] += 1
 
