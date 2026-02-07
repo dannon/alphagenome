@@ -5,6 +5,12 @@
         <requirement type="package" version="3.9">python</requirement>
         <requirement type="package" version="0.30.24">cyvcf2</requirement>
         <requirement type="package" version="1.26">numpy</requirement>
+        <credentials name="alphagenome" version="1.0"
+                     label="AlphaGenome API"
+                     description="API key from Google DeepMind AlphaGenome">
+            <secret name="api_key" inject_as_env="ALPHAGENOME_API_KEY"
+                    label="API Key" description="Your AlphaGenome API key" />
+        </credentials>
     </requirements>
 
     <version_command>python '$__tool_directory__/alphagenome_variant_effect.py' --version</version_command>
@@ -13,7 +19,6 @@
         python '$__tool_directory__/alphagenome_variant_effect.py'
             --input '$input_vcf'
             --output '$output_vcf'
-            --api-key '$api_key'
             --organism '$organism'
             --output-types
             #for $otype in $output_types
@@ -32,18 +37,6 @@
     <inputs>
         <param name="input_vcf" type="data" format="vcf" label="Input VCF file"
                help="VCF file containing variants to score"/>
-
-        <param name="api_key" type="text" label="AlphaGenome API Key"
-               help="API key from Google DeepMind AlphaGenome">
-            <sanitizer>
-                <valid initial="string.ascii_letters,string.digits">
-                    <add value="-"/>
-                    <add value="_"/>
-                    <add value="."/>
-                </valid>
-            </sanitizer>
-            <validator type="empty_field" message="API key is required"/>
-        </param>
 
         <param name="organism" type="select" label="Organism">
             <option value="human" selected="true">Human (hg38)</option>
@@ -87,10 +80,9 @@
     <tests>
         <test expect_num_outputs="1">
             <param name="input_vcf" value="test_input.vcf"/>
-            <param name="api_key" value="test_key_placeholder"/>
             <param name="organism" value="human"/>
             <param name="output_types" value="RNA_SEQ"/>
-            <param name="sequence_length" value="100KB"/>
+            <param name="sequence_length" value="128KB"/>
             <param name="max_variants" value="3"/>
             <output name="output_vcf">
                 <assert_contents>

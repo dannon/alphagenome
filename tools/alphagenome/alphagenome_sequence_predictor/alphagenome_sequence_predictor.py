@@ -9,6 +9,7 @@ For synthetic biology (designed sequences) and non-reference assemblies.
 import argparse
 import csv
 import logging
+import os
 import sys
 
 import numpy as np
@@ -105,6 +106,11 @@ def run(args):
     logging.info("Sequence length: %s", args.sequence_length)
     logging.info("Max sequences: %d", args.max_sequences)
 
+    api_key = args.api_key or os.environ.get("ALPHAGENOME_API_KEY")
+    if not api_key and not args.local_model:
+        logging.error("No API key provided. Set ALPHAGENOME_API_KEY or use --api-key")
+        sys.exit(1)
+
     organism = ORGANISM_MAP[args.organism]
     target_length = SEQUENCE_LENGTH_MAP[args.sequence_length]
     requested_outputs = [OUTPUT_TYPE_MAP[t] for t in args.output_types]
@@ -119,7 +125,7 @@ def run(args):
     logging.info("Loaded %d sequences", len(sequences))
 
     logging.info("Connecting to AlphaGenome...")
-    model = create_model(args.api_key, local_model=args.local_model)
+    model = create_model(api_key, local_model=args.local_model)
     logging.info("Model ready.")
 
     stats = {"total": 0, "predicted": 0, "errors": 0}
@@ -234,7 +240,7 @@ def parse_arguments():
     )
     parser.add_argument("--input", required=True, help="Input FASTA file")
     parser.add_argument("--output", required=True, help="Output TSV file")
-    parser.add_argument("--api-key", required=True, help="AlphaGenome API key")
+    parser.add_argument("--api-key", default=None, help="AlphaGenome API key (or set ALPHAGENOME_API_KEY)")
     parser.add_argument(
         "--organism", choices=["human", "mouse"], default="human",
     )

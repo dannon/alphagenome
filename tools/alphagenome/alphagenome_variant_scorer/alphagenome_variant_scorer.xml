@@ -6,6 +6,12 @@
         <requirement type="package" version="0.30.24">cyvcf2</requirement>
         <requirement type="package" version="1.26">numpy</requirement>
         <requirement type="package" version="2.0">pandas</requirement>
+        <credentials name="alphagenome" version="1.0"
+                     label="AlphaGenome API"
+                     description="API key from Google DeepMind AlphaGenome">
+            <secret name="api_key" inject_as_env="ALPHAGENOME_API_KEY"
+                    label="API Key" description="Your AlphaGenome API key" />
+        </credentials>
     </requirements>
 
     <version_command>python '$__tool_directory__/alphagenome_variant_scorer.py' --version</version_command>
@@ -14,7 +20,6 @@
         python '$__tool_directory__/alphagenome_variant_scorer.py'
             --input '$input_vcf'
             --output '$output_tsv'
-            --api-key '$api_key'
             --organism '$organism'
             --scorers
             #for $scorer in $scorers
@@ -30,18 +35,6 @@
     <inputs>
         <param name="input_vcf" type="data" format="vcf" label="Input VCF file"
                help="VCF file containing variants to score"/>
-
-        <param name="api_key" type="text" label="AlphaGenome API Key"
-               help="API key from Google DeepMind AlphaGenome">
-            <sanitizer>
-                <valid initial="string.ascii_letters,string.digits">
-                    <add value="-"/>
-                    <add value="_"/>
-                    <add value="."/>
-                </valid>
-            </sanitizer>
-            <validator type="empty_field" message="API key is required"/>
-        </param>
 
         <param name="organism" type="select" label="Organism">
             <option value="human" selected="true">Human (hg38)</option>
@@ -94,7 +87,6 @@
     <tests>
         <test expect_num_outputs="1">
             <param name="input_vcf" value="test_input.vcf"/>
-            <param name="api_key" value="test_key_placeholder"/>
             <param name="organism" value="human"/>
             <param name="scorers" value="RNA_SEQ"/>
             <param name="sequence_length" value="16KB"/>

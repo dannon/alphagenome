@@ -10,6 +10,7 @@ server-side chunking and parallelism.
 import argparse
 import csv
 import logging
+import os
 import sys
 
 import numpy as np
@@ -79,6 +80,11 @@ def run(args):
     logging.info("Sequence length: %s", args.sequence_length)
     logging.info("Max regions: %d, max region width: %dbp", args.max_regions, args.max_region_width)
 
+    api_key = args.api_key or os.environ.get("ALPHAGENOME_API_KEY")
+    if not api_key and not args.local_model:
+        logging.error("No API key provided. Set ALPHAGENOME_API_KEY or use --api-key")
+        sys.exit(1)
+
     organism = ORGANISM_MAP[args.organism]
     seq_length = SEQUENCE_LENGTH_MAP[args.sequence_length]
 
@@ -96,7 +102,7 @@ def run(args):
     logging.info("Loaded %d regions", len(regions))
 
     logging.info("Connecting to AlphaGenome...")
-    model = create_model(args.api_key, local_model=args.local_model)
+    model = create_model(api_key, local_model=args.local_model)
     logging.info("Model ready.")
 
     stats = {"regions": 0, "scored": 0, "errors": 0}
@@ -194,7 +200,7 @@ def parse_arguments():
     )
     parser.add_argument("--input", required=True, help="Input BED file")
     parser.add_argument("--output", required=True, help="Output TSV file")
-    parser.add_argument("--api-key", required=True, help="AlphaGenome API key")
+    parser.add_argument("--api-key", default=None, help="AlphaGenome API key (or set ALPHAGENOME_API_KEY)")
     parser.add_argument(
         "--organism", choices=["human", "mouse"], default="human",
     )

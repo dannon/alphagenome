@@ -4,6 +4,12 @@
     <requirements>
         <requirement type="package" version="3.9">python</requirement>
         <requirement type="package" version="1.26">numpy</requirement>
+        <credentials name="alphagenome" version="1.0"
+                     label="AlphaGenome API"
+                     description="API key from Google DeepMind AlphaGenome">
+            <secret name="api_key" inject_as_env="ALPHAGENOME_API_KEY"
+                    label="API Key" description="Your AlphaGenome API key" />
+        </credentials>
     </requirements>
 
     <version_command>python '$__tool_directory__/alphagenome_sequence_predictor.py' --version</version_command>
@@ -12,7 +18,6 @@
         python '$__tool_directory__/alphagenome_sequence_predictor.py'
             --input '$input_fasta'
             --output '$output_tsv'
-            --api-key '$api_key'
             --organism '$organism'
             --output-types
             #for $otype in $output_types
@@ -35,18 +40,6 @@
     <inputs>
         <param name="input_fasta" type="data" format="fasta" label="Input FASTA file"
                help="DNA sequences to predict regulatory tracks for"/>
-
-        <param name="api_key" type="text" label="AlphaGenome API Key"
-               help="API key from Google DeepMind AlphaGenome">
-            <sanitizer>
-                <valid initial="string.ascii_letters,string.digits">
-                    <add value="-"/>
-                    <add value="_"/>
-                    <add value="."/>
-                </valid>
-            </sanitizer>
-            <validator type="empty_field" message="API key is required"/>
-        </param>
 
         <param name="organism" type="select" label="Organism">
             <option value="human" selected="true">Human (hg38)</option>
@@ -105,7 +98,6 @@
     <tests>
         <test expect_num_outputs="1">
             <param name="input_fasta" value="test_sequences.fa"/>
-            <param name="api_key" value="test_key_placeholder"/>
             <param name="organism" value="human"/>
             <param name="output_types" value="RNA_SEQ"/>
             <param name="sequence_length" value="16KB"/>
