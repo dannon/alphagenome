@@ -2,9 +2,8 @@
     <description>Predict variant effects using AlphaGenome</description>
 
     <requirements>
-        <requirement type="package" version="3.9">python</requirement>
+        <requirement type="package" version="0.5.1">alphagenome</requirement>
         <requirement type="package" version="0.30.24">cyvcf2</requirement>
-        <requirement type="package" version="1.26">numpy</requirement>
         <credentials name="alphagenome" version="1.0"
                      label="AlphaGenome API"
                      description="API key from Google DeepMind AlphaGenome">
