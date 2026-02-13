@@ -52,10 +52,14 @@ planemo serve tools/alphagenome/*/
     --output-types RNA_SEQ --max-variants 3 --verbose
 ```
 
+## IUC Submission
+
+These tools have been submitted to [galaxyproject/tools-iuc](https://github.com/galaxyproject/tools-iuc) in [PR #7680](https://github.com/galaxyproject/tools-iuc/pull/7680). Future development will continue there. This repo served as the development workspace for prototyping and initial API integration.
+
 ## Dependencies
 
-- `alphagenome` Python package (pip only, not in conda — must be pre-installed)
-- `cyvcf2`, `numpy`, `pandas` (conda or pip)
+- `alphagenome` bioconda package (primary dependency, includes Python SDK)
+- `cyvcf2` (VCF tools only)
 - `planemo` for Galaxy tool development/testing
 
 ## Citation
