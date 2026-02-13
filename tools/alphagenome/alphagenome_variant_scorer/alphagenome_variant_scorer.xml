@@ -1,16 +1,12 @@
-<tool id="alphagenome_variant_scorer" name="AlphaGenome Variant Scorer" version="0.1.0" profile="23.0">
+<tool id="alphagenome_variant_scorer" name="AlphaGenome Variant Scorer" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="23.0">
     <description>Gene-level variant scoring with quantile normalization</description>
-
-    <requirements>
-        <requirement type="package" version="0.5.1">alphagenome</requirement>
+    <macros>
+        <import>macros.xml</import>
+    </macros>
+    <expand macro="requirements">
         <requirement type="package" version="0.30.24">cyvcf2</requirement>
-        <credentials name="alphagenome" version="1.0"
-                     label="AlphaGenome API"
-                     description="API key from Google DeepMind AlphaGenome">
-            <secret name="api_key" inject_as_env="ALPHAGENOME_API_KEY"
-                    label="API Key" description="Your AlphaGenome API key" />
-        </credentials>
-    </requirements>
+        <expand macro="credentials"/>
+    </expand>
 
     <version_command>python '$__tool_directory__/alphagenome_variant_scorer.py' --version</version_command>
 
@@ -25,6 +21,9 @@
             #end for
             --sequence-length '$sequence_length'
             --max-variants $max_variants
+            #if $test_fixture
+                --test-fixture '$test_fixture'
+            #end if
             #if $verbose
                 --verbose
             #end if
@@ -76,6 +75,9 @@
 
         <param name="verbose" type="boolean" checked="false" truevalue="true" falsevalue="false"
                label="Verbose logging"/>
+
+        <param name="test_fixture" type="data" format="json" optional="true"
+               label="Test fixture (internal)" help="For automated testing only"/>
     </inputs>
 
     <outputs>
@@ -89,9 +91,14 @@
             <param name="scorers" value="RNA_SEQ"/>
             <param name="sequence_length" value="16KB"/>
             <param name="max_variants" value="3"/>
+            <param name="test_fixture" value="fixture_variant_scorer.json" ftype="json"/>
             <output name="output_tsv">
                 <assert_contents>
                     <has_text text="variant_id"/>
+                    <has_text text="gene_name"/>
+                    <has_text text="quantile_score"/>
+                    <has_text text="chr22:36201698:A>C"/>
+                    <has_text text="APOL4"/>
                 </assert_contents>
             </output>
         </test>
@@ -157,7 +164,5 @@ genes, and RNA processing with a unified model." *Nature*.
 DOI: 10.1038/s41586-025-10014-0
     ]]></help>
 
-    <citations>
-        <citation type="doi">10.1038/s41586-025-10014-0</citation>
-    </citations>
+    <expand macro="citations"/>
 </tool>
