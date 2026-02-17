@@ -40,16 +40,17 @@ Predicts regulatory tracks from raw DNA sequence using `predict_sequence()`. No 
 
 ```bash
 # Lint all tools
-planemo lint tools/alphagenome/*/
+planemo lint tools/alphagenome/
+
+# Run fixture-based tests (no API key needed)
+planemo test tools/alphagenome/ --no_dependency_resolution --galaxy_python_version 3.12
 
 # Serve all tools in a local Galaxy instance
-planemo serve tools/alphagenome/*/
+planemo serve tools/alphagenome/
 
-# Run any tool standalone (requires .venv with alphagenome package + API key)
-.venv/bin/python tools/alphagenome/alphagenome_variant_effect/alphagenome_variant_effect.py \
-    --input test_input.vcf --output out.vcf \
-    --api-key $ALPHAGENOME_API_KEY \
-    --output-types RNA_SEQ --max-variants 3 --verbose
+# Regenerate test fixtures from real API (requires API key)
+export ALPHAGENOME_API_KEY=<key>
+cd tools/alphagenome && bash generate_test_fixtures.sh
 ```
 
 ## IUC Submission

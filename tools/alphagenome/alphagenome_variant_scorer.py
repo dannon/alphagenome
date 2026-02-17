@@ -17,7 +17,7 @@ from alphagenome.data import genome
 from alphagenome.models import dna_client
 from alphagenome.models.variant_scorers import RECOMMENDED_VARIANT_SCORERS, tidy_scores
 
-__version__ = "0.1.0"
+__version__ = "0.5.1"
 
 ORGANISM_MAP = {
     "human": dna_client.Organism.HOMO_SAPIENS,
@@ -65,7 +65,6 @@ def run(args):
     organism = ORGANISM_MAP[args.organism]
     seq_length = SEQUENCE_LENGTH_MAP[args.sequence_length]
 
-    # Select scorers from RECOMMENDED_VARIANT_SCORERS
     available_keys = list(RECOMMENDED_VARIANT_SCORERS.keys())
     selected_keys = args.scorers
     for key in selected_keys:
@@ -102,7 +101,7 @@ def run(args):
             pos = record.POS
             ref = record.REF
 
-            if not record.ALT or len(record.ALT) == 0:
+            if not record.ALT:
                 continue
 
             alt = record.ALT[0]
@@ -134,14 +133,12 @@ def run(args):
     finally:
         vcf_reader.close()
 
-    # Write output
     if all_rows:
         import pandas as pd
         combined = pd.concat(all_rows, ignore_index=True)
         combined.to_csv(args.output, sep="\t", index=False)
         logging.info("Wrote %d rows to %s", len(combined), args.output)
     else:
-        # Write header-only file
         with open(args.output, "w") as f:
             f.write("variant_id\n")
         logging.warning("No variants scored successfully")

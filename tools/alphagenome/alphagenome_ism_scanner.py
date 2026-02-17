@@ -18,7 +18,7 @@ from alphagenome.data import genome
 from alphagenome.models import dna_client
 from alphagenome.models.variant_scorers import RECOMMENDED_VARIANT_SCORERS
 
-__version__ = "0.1.0"
+__version__ = "0.5.1"
 
 ORGANISM_MAP = {
     "human": dna_client.Organism.HOMO_SAPIENS,
@@ -41,7 +41,6 @@ def create_model(api_key, local_model=False):
 
 
 def parse_bed(bed_path, max_regions, max_region_width):
-    """Parse BED file and return list of (chrom, start, end, name) tuples."""
     regions = []
     with open(bed_path) as f:
         for line_num, line in enumerate(f):

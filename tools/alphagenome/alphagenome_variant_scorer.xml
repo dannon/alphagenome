@@ -1,14 +1,13 @@
-<tool id="alphagenome_variant_scorer" name="AlphaGenome Variant Scorer" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="23.0">
+<tool id="alphagenome_variant_scorer" name="AlphaGenome Variant Scorer" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="@PROFILE@">
     <description>Gene-level variant scoring with quantile normalization</description>
     <macros>
         <import>macros.xml</import>
     </macros>
     <expand macro="requirements">
-        <requirement type="package" version="0.30.24">cyvcf2</requirement>
         <expand macro="credentials"/>
     </expand>
 
-    <version_command>python '$__tool_directory__/alphagenome_variant_scorer.py' --version</version_command>
+    <version_command>echo @TOOL_VERSION@</version_command>
 
     <command detect_errors="exit_code"><![CDATA[
         python '$__tool_directory__/alphagenome_variant_scorer.py'
@@ -21,24 +20,16 @@
             #end for
             --sequence-length '$sequence_length'
             --max-variants $max_variants
-            #if $test_fixture
-                --test-fixture '$test_fixture'
-            #end if
-            #if $verbose
-                --verbose
-            #end if
+            @CMD_TEST_FIXTURE@
     ]]></command>
 
     <inputs>
         <param name="input_vcf" type="data" format="vcf" label="Input VCF file"
                help="VCF file containing variants to score"/>
 
-        <param name="organism" type="select" label="Organism">
-            <option value="human" selected="true">Human (hg38)</option>
-            <option value="mouse">Mouse (mm10)</option>
-        </param>
+        <expand macro="organism_param"/>
 
-        <param name="scorers" type="select" multiple="true" display="checkboxes"
+        <param name="scorers" type="select" multiple="true"
                label="Variant scorers">
             <option value="RNA_SEQ" selected="true">RNA-seq expression</option>
             <option value="RNA_SEQ_ACTIVE">RNA-seq active</option>
@@ -62,26 +53,17 @@
             <validator type="no_options" message="Select at least one scorer"/>
         </param>
 
-        <param name="sequence_length" type="select" label="Prediction window size">
-            <option value="16KB">16 KB</option>
-            <option value="128KB">128 KB</option>
-            <option value="512KB">512 KB</option>
-            <option value="1MB" selected="true">1 MB</option>
-        </param>
+        <expand macro="sequence_length_param"/>
 
         <param name="max_variants" type="integer" value="100" min="1" max="10000"
                label="Maximum variants to process"
                help="API is rate-limited; start small to verify results"/>
 
-        <param name="verbose" type="boolean" checked="false" truevalue="true" falsevalue="false"
-               label="Verbose logging"/>
-
-        <param name="test_fixture" type="data" format="json" optional="true"
-               label="Test fixture (internal)" help="For automated testing only"/>
+        <expand macro="test_fixture_param"/>
     </inputs>
 
     <outputs>
-        <data name="output_tsv" format="tabular" label="${tool.name} on ${on_string}: Scores"/>
+        <data name="output_tsv" format="tabular" label="${tool.name} on ${on_string}"/>
     </outputs>
 
     <tests>
@@ -91,7 +73,7 @@
             <param name="scorers" value="RNA_SEQ"/>
             <param name="sequence_length" value="16KB"/>
             <param name="max_variants" value="3"/>
-            <param name="test_fixture" value="fixture_variant_scorer.json" ftype="json"/>
+            <param name="test_fixture" value="test-data/fixture_variant_scorer.json"/>
             <output name="output_tsv">
                 <assert_contents>
                     <has_text text="variant_id"/>
