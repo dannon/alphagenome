@@ -3,12 +3,8 @@
     <macros>
         <import>macros.xml</import>
     </macros>
-    <expand macro="requirements">
-        <expand macro="credentials"/>
-    </expand>
-
+    <expand macro="requirements"/>
     <version_command>echo @TOOL_VERSION@</version_command>
-
     <command detect_errors="exit_code"><![CDATA[
         python '$__tool_directory__/alphagenome_variant_effect.py'
             --input '$input_vcf'
@@ -23,30 +19,18 @@
             @CMD_ONTOLOGY_TERMS@
             @CMD_TEST_FIXTURE@
     ]]></command>
-
     <inputs>
-        <param name="input_vcf" type="data" format="vcf" label="Input VCF file"
-               help="VCF file containing variants to score"/>
-
+        <param name="input_vcf" type="data" format="vcf" label="Input VCF file" help="VCF file containing variants to score"/>
         <expand macro="organism_param"/>
-
         <expand macro="output_types_param"/>
-
         <expand macro="ontology_terms_param"/>
-
         <expand macro="sequence_length_param"/>
-
-        <param name="max_variants" type="integer" value="100" min="1" max="10000"
-               label="Maximum variants to process"
-               help="API is rate-limited; start small to verify results"/>
-
+        <param name="max_variants" type="integer" value="100" min="1" max="10000" label="Maximum variants to process" help="API is rate-limited; start small to verify results"/>
         <expand macro="test_fixture_param"/>
     </inputs>
-
     <outputs>
-        <data name="output_vcf" format="vcf" label="${tool.name} on ${on_string}"/>
+        <data name="output_vcf" format="vcf"/>
     </outputs>
-
     <tests>
         <test expect_num_outputs="1">
             <param name="input_vcf" value="test_input.vcf"/>
@@ -65,7 +49,6 @@
             </output>
         </test>
     </tests>
-
     <help><![CDATA[
 **AlphaGenome Variant Effect Predictor**
 
@@ -127,15 +110,6 @@ Larger windows capture more genomic context but cost more compute:
 - **128 KB** — Good for most variants
 - **512 KB** — Extended regulatory context
 - **1 MB** — Maximum context (default, recommended)
-
------
-
-**Citation**
-
-Avsec et al. (2025). "Predicting the impact of genetic variants on chromatin,
-genes, and RNA processing with a unified model." *Nature*.
-DOI: 10.1038/s41586-025-10014-0
     ]]></help>
-
     <expand macro="citations"/>
 </tool>

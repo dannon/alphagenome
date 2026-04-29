@@ -1,20 +1,16 @@
 <macros>
-    <token name="@TOOL_VERSION@">0.5.1</token>
-    <token name="@VERSION_SUFFIX@">0</token>
+    <token name="@TOOL_VERSION@">0.6.1</token>
+    <token name="@VERSION_SUFFIX@">1</token>
     <token name="@PROFILE@">25.0</token>
     <xml name="requirements">
         <requirements>
             <requirement type="package" version="@TOOL_VERSION@">alphagenome</requirement>
             <requirement type="package" version="0.31.4">cyvcf2</requirement>
-            <yield/>
+            <requirement type="package" version="2.3.3">pandas</requirement>
+            <credentials name="alphagenome" version="1.0" label="AlphaGenome API" description="API key from Google DeepMind AlphaGenome">
+                <secret name="api_key" inject_as_env="ALPHAGENOME_API_KEY" label="API Key" description="Your AlphaGenome API key"/>
+            </credentials>
         </requirements>
-    </xml>
-    <xml name="credentials">
-        <credentials name="alphagenome" version="1.0" label="AlphaGenome API"
-            description="API key from Google DeepMind AlphaGenome">
-            <secret name="api_key" inject_as_env="ALPHAGENOME_API_KEY"
-                label="API Key" description="Your AlphaGenome API key"/>
-        </credentials>
     </xml>
     <xml name="organism_param">
         <param name="organism" type="select" label="Organism">
@@ -23,8 +19,7 @@
         </param>
     </xml>
     <xml name="sequence_length_param">
-        <param name="sequence_length" type="select" label="Prediction window size"
-            help="Genomic context window in bases around the target region (e.g. 1 Mb = 1,048,576 bases, not bytes)">
+        <param name="sequence_length" type="select" label="Prediction window size" help="Genomic context window in bases around the target region (e.g. 1 Mb = 1,048,576 bases, not bytes)">
             <option value="16KB">16 kb</option>
             <option value="128KB">128 kb</option>
             <option value="512KB">512 kb</option>
@@ -32,8 +27,7 @@
         </param>
     </xml>
     <xml name="output_types_param">
-        <param name="output_types" type="select" multiple="true"
-            label="Output types to predict">
+        <param name="output_types" type="select" multiple="true" label="Output types to predict">
             <option value="RNA_SEQ" selected="true">RNA-seq</option>
             <option value="ATAC">ATAC-seq</option>
             <option value="CAGE">CAGE</option>
@@ -46,13 +40,15 @@
         </param>
     </xml>
     <xml name="ontology_terms_param">
-        <param name="ontology_terms" type="text" value="" label="Ontology terms (optional)"
-            help="Comma-separated UBERON/CL terms for tissue context, e.g. UBERON:0002107,CL:0000746">
+        <param name="ontology_terms" type="text" value="" label="Ontology terms (optional)" help="Comma-separated UBERON/CL terms for tissue context, e.g. UBERON:0002107,CL:0000746">
             <validator type="regex" message="Only alphanumeric characters, colons, commas, and spaces are allowed">[A-Za-z0-9:, ]*</validator>
         </param>
     </xml>
     <xml name="test_fixture_param">
         <param name="test_fixture" type="hidden" value=""/>
+    </xml>
+    <xml name="mock_ism_results_param">
+        <param name="mock_ism_results" type="hidden" value=""/>
     </xml>
     <token name="@CMD_ONTOLOGY_TERMS@"><![CDATA[
             #if str($ontology_terms).strip()
@@ -62,6 +58,11 @@
     <token name="@CMD_TEST_FIXTURE@"><![CDATA[
             #if $test_fixture
                 --test-fixture '$__tool_directory__/$test_fixture'
+            #end if
+    ]]></token>
+    <token name="@CMD_MOCK_ISM_RESULTS@"><![CDATA[
+            #if $mock_ism_results
+                --mock-ism-results '$__tool_directory__/$mock_ism_results'
             #end if
     ]]></token>
     <xml name="citations">
