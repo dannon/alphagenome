@@ -1,28 +1,43 @@
-# AlphaGenome Local Inference Benchmark (TACC Lonestar6)
+# AlphaGenome Local Inference Benchmark (TACC)
 
-Tests whether AlphaGenome's open-weight research model runs on LS6's H100 nodes, and measures VRAM usage and inference speed at each sequence length the Galaxy tools support.
+Tests whether AlphaGenome's open-weight research model runs on TACC H100 nodes, and measures VRAM usage and inference speed at each sequence length the Galaxy tools support. Two cluster targets are included: Lonestar6 (LS6) and Stampede3.
 
 ## Background
 
-The [Galaxy AlphaGenome wrappers](https://github.com/galaxyproject/tools-iuc/tree/master/tools/alphagenome) currently use the cloud API, but some use cases involve protected data that can't leave the compute environment. DeepMind [recommends at least an H100](https://github.com/google-deepmind/alphagenome_research) for local inference. LS6 has 4 nodes with 2x H100 PCIe 80GB each in the `gpu-h100` queue.
+The [Galaxy AlphaGenome wrappers](https://github.com/galaxyproject/tools-iuc/tree/master/tools/alphagenome) currently use the cloud API, but some use cases involve protected data that can't leave the compute environment. DeepMind [recommends at least an H100](https://github.com/google-deepmind/alphagenome_research) for local inference.
+
+| Cluster | Queue | GPUs per node | Notes |
+|---|---|---|---|
+| LS6 | `gpu-h100` | 2x H100 PCIe 80GB | Original target |
+| Stampede3 | `h100` | 4x H100 SXM5 | Higher GPU density, SXM5 form factor |
+
+**CUDA requirement:** Stampede3 H100 (and Vista H200) require CUDA 12.8 or later. The setup scripts try to verify this after `module load cuda`; if `nvcc` reports an older version, run `module avail cuda` and load a newer one.
 
 ## Setup
 
 Get an interactive session on an H100 node and run the setup script to create a Python venv and pre-download model weights (needs network access):
 
+**Lonestar6:**
 ```bash
 idev -p gpu-h100 -N 1 -n 1 -t 1:00:00
 bash setup.sh
 ```
 
-This installs JAX with CUDA support and `alphagenome-research` into `$SCRATCH/alphagenome-test`.
+**Stampede3:**
+```bash
+idev -p h100 -N 1 -n 1 -t 1:00:00
+bash setup-stampede3.sh
+```
+
+This installs JAX with CUDA 12 wheels and `alphagenome-research` into `$SCRATCH/alphagenome-test` (LS6) or `$SCRATCH/alphagenome-stampede3` (Stampede3).
 
 ## Running the benchmark
 
 Submit as a batch job:
 
 ```bash
-sbatch run.sh
+sbatch run.sh              # LS6
+sbatch run-stampede3.sh    # Stampede3
 ```
 
 Output goes to `alphagenome-bench-<jobid>.out`. The benchmark:
